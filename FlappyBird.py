@@ -1,7 +1,6 @@
 import pygame
 import sys
 import random
-pygame.mixer.init(44100, -16, 2, 64)
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -75,7 +74,8 @@ def create_pipes():
 def move_pipes(pipes):
     for pipe in pipes:
         pipe.centerx -= VEL
-    return pipes
+    visible_pipes = [pipe for pipe in pipes if pipe.right > -50]
+    return visible_pipes
 
 
 def draw_pipes(pipes):
@@ -102,16 +102,31 @@ def rotate_bird(bird):
 
 # Collision
 def check_collision(pipes):
+    global can_score
     for pipe in pipes:
         if bird_rect.colliderect(pipe):
+            can_score = True
             DEATH_SOUND.play()
             return False
 
     if bird_rect.top <= -BASE_HEIHGT or bird_rect.bottom >= WIN_HEIGHT:
+        can_score = True
         return False
     return True
 
 # Score
+
+
+def pipe_score_check():
+    global score, can_score
+    if pipe_list:
+        for pipe in pipe_list:
+            if 95 < pipe.centerx < 105 and can_score:
+                score += 1
+                SCORE_SOUND.play()
+                can_score = False
+            if pipe.centerx < 0:
+                can_score = True
 
 
 def score_display(game_state):
@@ -165,6 +180,7 @@ pygame.time.set_timer(BIRDFLAP, 200)  # time for flapping the wings
 # Game
 game_active = True
 score = 0
+can_score = True
 high_score = 0
 score_sound_countdown = 100
 game_over_rect = GAME_OVER_SURFACE.get_rect(
@@ -180,7 +196,7 @@ while True:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE and game_active:
                 bird_movement = 0
-                bird_movement -= 9
+                bird_movement -= 10
                 FLAP_SOUND.play()
 
             if event.key == pygame.K_SPACE and not game_active:
@@ -216,12 +232,10 @@ while True:
         pipe_list = move_pipes(pipe_list)
         draw_pipes(pipe_list)
 
-        score += 0.01
+        # Score
+        pipe_score_check()
         score_display('main_game')
-        score_sound_countdown -= 1
-        if score_sound_countdown == 0:
-            SCORE_SOUND.play()
-            score_sound_countdown = 100
+
     else:
         WIN.blit(GAME_OVER_SURFACE, game_over_rect)
         high_score = update_score(score, high_score)
